@@ -3,6 +3,8 @@ from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 # Load your cleaned data
 print("Loading data...")
@@ -196,7 +198,27 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday, sear
         )
         filtered_df = filtered_df[mask]
 
-    # Summary statistics
+    # CHECK IF EMPTY - ADD THIS SECTION
+    if len(filtered_df) == 0:
+        # Return empty/placeholder visualizations
+        empty_message = html.Div([
+            html.H3("⚠️ No Data Found", style={'color': '#e74c3c', 'textAlign': 'center'}),
+            html.P("No crashes match your current filters. Please adjust your selection.",
+                   style={'textAlign': 'center', 'color': '#7f8c8d'})
+        ])
+
+        # Create empty figures
+        empty_fig = go.Figure()
+        empty_fig.add_annotation(
+            text="No data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+
+        return empty_message, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Summary statistics (existing code continues...)
     total_crashes = len(filtered_df)
     total_injuries = filtered_df['NUMBER OF PERSONS INJURED'].sum()
     total_fatalities = filtered_df['NUMBER OF PERSONS KILLED'].sum()
@@ -246,59 +268,86 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday, sear
                   color_discrete_sequence=['#2ecc71', '#f39c12', '#e74c3c'])
     fig2.update_layout(template='plotly_white', height=400)
 
-    # Chart 3: Borough bar
+    # Chart 3: Borough bar - FIX FOR EMPTY DATA
     borough_data = filtered_df['BOROUGH'].value_counts().head(10)
-    fig3 = px.bar(x=borough_data.index, y=borough_data.values,
-                  title='Crashes by Borough',
-                  labels={'x': 'Borough', 'y': 'Number of Crashes'})
-    fig3.update_traces(marker_color='#3498db')
-    fig3.update_layout(template='plotly_white', height=400)
+    if len(borough_data) > 0:
+        fig3 = px.bar(x=borough_data.index, y=borough_data.values,
+                      title='Crashes by Borough',
+                      labels={'x': 'Borough', 'y': 'Number of Crashes'})
+        fig3.update_traces(marker_color='#3498db')
+        fig3.update_layout(template='plotly_white', height=400)
+    else:
+        fig3 = go.Figure()
+        fig3.add_annotation(text="No borough data", xref="paper", yref="paper",
+                            x=0.5, y=0.5, showarrow=False)
 
-    # Chart 4: Hourly distribution (NEW!)
+    # Chart 4: Hourly distribution
     hourly_data = filtered_df['HOUR'].value_counts().sort_index()
-    fig4 = px.bar(x=hourly_data.index, y=hourly_data.values,
-                  title='Crashes by Hour of Day',
-                  labels={'x': 'Hour', 'y': 'Number of Crashes'})
-    fig4.update_traces(marker_color='#e67e22')
-    fig4.update_layout(template='plotly_white', height=400)
+    if len(hourly_data) > 0:
+        fig4 = px.bar(x=hourly_data.index, y=hourly_data.values,
+                      title='Crashes by Hour of Day',
+                      labels={'x': 'Hour', 'y': 'Number of Crashes'})
+        fig4.update_traces(marker_color='#e67e22')
+        fig4.update_layout(template='plotly_white', height=400)
+    else:
+        fig4 = go.Figure()
+        fig4.add_annotation(text="No hourly data", xref="paper", yref="paper",
+                            x=0.5, y=0.5, showarrow=False)
 
-    # Chart 5: Heatmap (NEW!)
+    # Chart 5: Heatmap
     heatmap_data = filtered_df.groupby(['DAY_OF_WEEK_NUM', 'HOUR']).size().reset_index(name='count')
-    heatmap_pivot = heatmap_data.pivot(index='DAY_OF_WEEK_NUM', columns='HOUR', values='count')
 
-    fig5 = go.Figure(data=go.Heatmap(
-        z=heatmap_pivot.values,
-        x=heatmap_pivot.columns,
-        y=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        colorscale='YlOrRd'
-    ))
-    fig5.update_layout(
-        title='Crash Heatmap: Day × Hour',
-        xaxis_title='Hour of Day',
-        yaxis_title='Day of Week',
-        template='plotly_white',
-        height=500
-    )
+    if len(heatmap_data) > 0:
+        heatmap_pivot = heatmap_data.pivot(index='DAY_OF_WEEK_NUM', columns='HOUR', values='count')
 
-    # Chart 6: Map (NEW!)
-    map_sample = filtered_df[filtered_df['LATITUDE'].notna()].sample(
-        n=min(5000, len(filtered_df)), random_state=42
-    )
-    fig6 = px.scatter_mapbox(
-        map_sample,
-        lat='LATITUDE',
-        lon='LONGITUDE',
-        color='CRASH_SEVERITY',
-        color_discrete_map={
-            'Fatal': '#e74c3c',
-            'Injury': '#f39c12',
-            'Property Damage Only': '#2ecc71'
-        },
-        title=f'Crash Locations (Sample of {len(map_sample):,})',
-        zoom=10,
-        height=600
-    )
-    fig6.update_layout(mapbox_style="open-street-map")
+        fig5 = go.Figure(data=go.Heatmap(
+            z=heatmap_pivot.values,
+            x=heatmap_pivot.columns,
+            y=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            colorscale='YlOrRd'
+        ))
+        fig5.update_layout(
+            title='Crash Heatmap: Day × Hour',
+            xaxis_title='Hour of Day',
+            yaxis_title='Day of Week',
+            template='plotly_white',
+            height=500
+        )
+    else:
+        fig5 = go.Figure()
+        fig5.add_annotation(text="No heatmap data", xref="paper", yref="paper",
+                            x=0.5, y=0.5, showarrow=False)
+
+    # Chart 6: Map (UPDATED - see section 2 above for full code)
+    map_sample = filtered_df[filtered_df['LATITUDE'].notna()]
+
+    if len(map_sample) > 0:
+        map_sample = map_sample.sample(n=min(5000, len(map_sample)), random_state=42)
+
+        fig6 = px.scatter_map(
+            map_sample,
+            lat='LATITUDE',
+            lon='LONGITUDE',
+            color='CRASH_SEVERITY',
+            color_discrete_map={
+                'Fatal': '#e74c3c',
+                'Injury': '#f39c12',
+                'Property Damage Only': '#2ecc71'
+            },
+            title=f'Crash Locations (Sample of {len(map_sample):,})',
+            zoom=10,
+            height=600
+        )
+        fig6.update_layout(map_style="open-street-map")
+    else:
+        fig6 = go.Figure()
+        fig6.add_annotation(
+            text="No location data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=20, color="gray")
+        )
+        fig6.update_layout(height=600)
 
     return summary, fig1, fig2, fig3, fig4, fig5, fig6
 
@@ -315,4 +364,4 @@ def clear_search(n_clicks):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8050)
+    app.run(debug=False, port=8050)
