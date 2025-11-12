@@ -1,5 +1,3 @@
-# Save this as: app.py (PUSH 1)
-
 import dash
 from dash import dcc, html, Input, Output, State
 import plotly.express as px
@@ -186,4 +184,5 @@ def update_dashboard(n_clicks, borough, year, severity):
 
 
 if __name__ == '__main__':
+
     app.run(debug=True, port=8050)
