@@ -22,8 +22,9 @@ TEMPORAL_COLS = ['YEAR', 'MONTH', 'DAY_OF_WEEK', 'HOUR', 'TIME_OF_DAY']
 CATEGORICAL_COLS = ['BOROUGH', 'CRASH_SEVERITY', 'VEHICLE_TYPE_STANDARD',
                     'CONTRIBUTING FACTOR VEHICLE 1', 'DAY_OF_WEEK', 'TIME_OF_DAY']
 NUMERIC_COLS = ['NUMBER OF PERSONS INJURED', 'NUMBER OF PERSONS KILLED',
-                'NUMBER OF PEDESTRIANS INJURED', 'NUMBER OF CYCLIST INJURED',
-                'NUMBER OF MOTORIST INJURED']
+                'NUMBER OF PEDESTRIANS INJURED', 'NUMBER OF PEDESTRIANS KILLED',
+                'NUMBER OF CYCLIST INJURED', 'NUMBER OF CYCLIST KILLED',
+                'NUMBER OF MOTORIST INJURED', 'NUMBER OF MOTORIST KILLED']
 
 # Layout
 app.layout = html.Div([
@@ -140,20 +141,20 @@ app.layout = html.Div([
             html.Div([
                 html.H4("Categorical Analysis", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
                 html.Div([
-                    html.Label("Category:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
+                    html.Label("Category:", style={'fontWeight': 'bold', 'marginRight': '6px'}),
                     dcc.Dropdown(id='chart3-x',
                                  options=[{'label': c, 'value': c} for c in CATEGORICAL_COLS],
                                  value='BOROUGH', clearable=False,
-                                 style={'width': '120px', 'display': 'inline-block', 'marginRight': '10px'}),
-                    html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
+                                 style={'width': '200px', 'display': 'inline-block', 'marginRight': '10px'}),
+                    html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '6px'}),
                     dcc.Dropdown(id='chart3-y',
                                  options=[{'label': 'Count', 'value': 'count'}] +
                                          [{'label': c, 'value': c} for c in NUMERIC_COLS],
                                  value='count', clearable=False,
-                                 style={'width': '240px', 'display': 'inline-block', 'marginRight': '10px'}),
-                    html.Label("Top:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
+                                 style={'width': '220px', 'display': 'inline-block', 'marginRight': '10px'}),
+                    html.Label("Top:", style={'fontWeight': 'bold', 'marginRight': '0px'}),
                     dcc.Input(id='chart3-top', type='number', value=10, min=5, max=20,
-                              style={'width': '55px', 'display': 'inline-block'})
+                              style={'width': '30px', 'display': 'inline-block'})
                 ], style={'padding': '0 12px 12px 12px'})
             ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
             dcc.Graph(id='chart3', style={'marginTop': '0'}),
