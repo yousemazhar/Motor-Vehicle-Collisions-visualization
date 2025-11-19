@@ -4,13 +4,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import warnings
-
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 # Load data
 print("Loading data...")
 df = pd.read_csv('nyc_crashes_integrated_clean.csv', low_memory=False)
-df['CRASH_DATE_DT'] = pd.to_datetime(df['CRASH_DATE_DT'])
+df['CRASH DATE'] = pd.to_datetime(df['CRASH DATE'])
 print(f"Data loaded: {len(df):,} records")
 
 # Initialize app
@@ -18,9 +17,10 @@ app = dash.Dash(__name__)
 server = app.server
 
 # Define smart column choices for each graph type
-TEMPORAL_COLS = ['YEAR', 'MONTH', 'DAY_OF_WEEK', 'HOUR', 'TIME_OF_DAY']
-CATEGORICAL_COLS = ['BOROUGH', 'CRASH_SEVERITY', 'VEHICLE_TYPE_STANDARD',
-                    'CONTRIBUTING FACTOR VEHICLE 1', 'DAY_OF_WEEK', 'TIME_OF_DAY']
+TEMPORAL_COLS = ['CRASH_YEAR', 'CRASH_MONTH', 'CRASH_DAYOFWEEK', 'CRASH_HOUR']
+CATEGORICAL_COLS = ['BOROUGH', 'PERSON_TYPE', 'PERSON_INJURY',
+                    'CONTRIBUTING FACTOR VEHICLE 1', 'VEHICLE TYPE CODE 1',
+                    'PERSON_SEX', 'SAFETY_EQUIPMENT', 'POSITION_IN_VEHICLE']
 NUMERIC_COLS = ['NUMBER OF PERSONS INJURED', 'NUMBER OF PERSONS KILLED',
                 'NUMBER OF PEDESTRIANS INJURED', 'NUMBER OF PEDESTRIANS KILLED',
                 'NUMBER OF CYCLIST INJURED', 'NUMBER OF CYCLIST KILLED',
@@ -44,7 +44,7 @@ app.layout = html.Div([
                 html.Label("Borough:", style={'fontWeight': 'bold'}),
                 dcc.Dropdown(id='borough-filter',
                              options=[{'label': 'All', 'value': 'All'}] +
-                                     [{'label': b, 'value': b} for b in sorted(df['BOROUGH'].dropna().unique())],
+                                     [{'label': b, 'value': b} for b in sorted(df['BOROUGH'].dropna().unique()) if str(b) != 'nan'],
                              value='All', clearable=False)
             ], style={'width': '18%', 'display': 'inline-block', 'marginRight': '2%'}),
 
@@ -52,7 +52,7 @@ app.layout = html.Div([
                 html.Label("Year:", style={'fontWeight': 'bold'}),
                 dcc.Dropdown(id='year-filter',
                              options=[{'label': 'All', 'value': 'All'}] +
-                                     [{'label': y, 'value': y} for y in sorted(df['YEAR'].unique())],
+                                     [{'label': int(y), 'value': int(y)} for y in sorted(df['CRASH_YEAR'].unique())],
                              value='All', clearable=False)
             ], style={'width': '18%', 'display': 'inline-block', 'marginRight': '2%'}),
 
@@ -60,24 +60,23 @@ app.layout = html.Div([
                 html.Label("Vehicle Type:", style={'fontWeight': 'bold'}),
                 dcc.Dropdown(id='vehicle-filter',
                              options=[{'label': 'All', 'value': 'All'}] +
-                                     [{'label': v, 'value': v} for v in
-                                      sorted(df['VEHICLE_TYPE_STANDARD'].dropna().unique())],
+                                     [{'label': v, 'value': v} for v in sorted(df['VEHICLE TYPE CODE 1'].dropna().unique()) if str(v) != 'nan'][:50],
                              value='All', clearable=False)
             ], style={'width': '18%', 'display': 'inline-block', 'marginRight': '2%'}),
 
             html.Div([
-                html.Label("Severity:", style={'fontWeight': 'bold'}),
-                dcc.Dropdown(id='severity-filter',
+                html.Label("Person Type:", style={'fontWeight': 'bold'}),
+                dcc.Dropdown(id='person-type-filter',
                              options=[{'label': 'All', 'value': 'All'}] +
-                                     [{'label': s, 'value': s} for s in df['CRASH_SEVERITY'].unique()],
+                                     [{'label': s, 'value': s} for s in sorted(df['PERSON_TYPE'].dropna().unique()) if str(s) != 'nan'],
                              value='All', clearable=False)
             ], style={'width': '18%', 'display': 'inline-block', 'marginRight': '2%'}),
 
             html.Div([
-                html.Label("Time of Day:", style={'fontWeight': 'bold'}),
-                dcc.Dropdown(id='timeofday-filter',
+                html.Label("Person Injury:", style={'fontWeight': 'bold'}),
+                dcc.Dropdown(id='injury-filter',
                              options=[{'label': 'All', 'value': 'All'}] +
-                                     [{'label': t, 'value': t} for t in df['TIME_OF_DAY'].unique()],
+                                     [{'label': t, 'value': t} for t in sorted(df['PERSON_INJURY'].dropna().unique()) if str(t) != 'nan'],
                              value='All', clearable=False)
             ], style={'width': '18%', 'display': 'inline-block'})
         ]),
@@ -99,19 +98,19 @@ app.layout = html.Div([
         # Chart 1: Time Series (Editable)
         html.Div([
             html.Div([
-                html.H4("Trend Analysis", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
+                html.H4("Chart 1: Trend Analysis", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
                 html.Div([
                     html.Label("X-axis:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
                     dcc.Dropdown(id='chart1-x',
                                  options=[{'label': c, 'value': c} for c in TEMPORAL_COLS],
-                                 value='YEAR', clearable=False,
+                                 value='CRASH_YEAR', clearable=False,
                                  style={'width': '140px', 'display': 'inline-block', 'marginRight': '15px'}),
                     html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
                     dcc.Dropdown(id='chart1-y',
                                  options=[{'label': 'Count', 'value': 'count'}] +
                                          [{'label': c, 'value': c} for c in NUMERIC_COLS],
                                  value='count', clearable=False,
-                                 style={'width': '240px', 'display': 'inline-block'})
+                                 style={'width': '170px', 'display': 'inline-block'})
                 ], style={'padding': '0 12px 12px 12px'})
             ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
             dcc.Graph(id='chart1', style={'marginTop': '0'}),
@@ -121,12 +120,12 @@ app.layout = html.Div([
                   'marginRight': '2%', 'backgroundColor': '#fff', 'borderRadius': '5px',
                   'boxShadow': '0 2px 4px rgba(0,0,0,0.1)', 'marginBottom': '20px'}),
 
-        # Chart 2: Severity Pie (Not Editable)
+        # Chart 2: Person Type Distribution (Not Editable)
         html.Div([
             html.Div([
-                html.H4("Severity Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
+                html.H4("Chart 2: Person Type Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
             ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
-            dcc.Graph(id='severity-pie', style={'marginTop': '0'}),
+            dcc.Graph(id='chart2-pie', style={'marginTop': '0'}),
             html.Div(id='insight2', style={'padding': '10px 12px', 'backgroundColor': '#e8f5e9',
                                            'borderLeft': '4px solid #4caf50', 'borderRadius': '0 0 5px 5px'})
         ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top',
@@ -139,22 +138,22 @@ app.layout = html.Div([
         # Chart 3: Categorical Bar (Editable)
         html.Div([
             html.Div([
-                html.H4("Categorical Analysis", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
+                html.H4("Chart 3: Categorical Analysis", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
                 html.Div([
-                    html.Label("Category:", style={'fontWeight': 'bold', 'marginRight': '6px'}),
+                    html.Label("Category:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
                     dcc.Dropdown(id='chart3-x',
                                  options=[{'label': c, 'value': c} for c in CATEGORICAL_COLS],
                                  value='BOROUGH', clearable=False,
-                                 style={'width': '200px', 'display': 'inline-block', 'marginRight': '10px'}),
-                    html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '6px'}),
+                                 style={'width': '140px', 'display': 'inline-block', 'marginRight': '10px'}),
+                    html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
                     dcc.Dropdown(id='chart3-y',
                                  options=[{'label': 'Count', 'value': 'count'}] +
                                          [{'label': c, 'value': c} for c in NUMERIC_COLS],
                                  value='count', clearable=False,
-                                 style={'width': '220px', 'display': 'inline-block', 'marginRight': '10px'}),
-                    html.Label("Top:", style={'fontWeight': 'bold', 'marginRight': '0px'}),
+                                 style={'width': '130px', 'display': 'inline-block', 'marginRight': '10px'}),
+                    html.Label("Top:", style={'fontWeight': 'bold', 'marginRight': '8px'}),
                     dcc.Input(id='chart3-top', type='number', value=10, min=5, max=20,
-                              style={'width': '30px', 'display': 'inline-block'})
+                              style={'width': '55px', 'display': 'inline-block'})
                 ], style={'padding': '0 12px 12px 12px'})
             ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
             dcc.Graph(id='chart3', style={'marginTop': '0'}),
@@ -167,19 +166,19 @@ app.layout = html.Div([
         # Chart 4: Time Distribution (Editable)
         html.Div([
             html.Div([
-                html.H4("Time Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
+                html.H4("Chart 4: Time Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'}),
                 html.Div([
                     html.Label("X-axis:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
                     dcc.Dropdown(id='chart4-x',
                                  options=[{'label': c, 'value': c} for c in TEMPORAL_COLS],
-                                 value='HOUR', clearable=False,
+                                 value='CRASH_HOUR', clearable=False,
                                  style={'width': '140px', 'display': 'inline-block', 'marginRight': '15px'}),
                     html.Label("Y-axis:", style={'fontWeight': 'bold', 'marginRight': '10px'}),
                     dcc.Dropdown(id='chart4-y',
                                  options=[{'label': 'Count', 'value': 'count'}] +
                                          [{'label': c, 'value': c} for c in NUMERIC_COLS],
                                  value='count', clearable=False,
-                                 style={'width': '240px', 'display': 'inline-block'})
+                                 style={'width': '170px', 'display': 'inline-block'})
                 ], style={'padding': '0 12px 12px 12px'})
             ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
             dcc.Graph(id='chart4', style={'marginTop': '0'}),
@@ -193,7 +192,7 @@ app.layout = html.Div([
     # Row 3: Chart 5 (Heatmap) - Full Width
     html.Div([
         html.Div([
-            html.H4("Day × Hour Heatmap", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
+            html.H4("Chart 5: Day × Hour Heatmap", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
         ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
         dcc.Graph(id='heatmap', style={'marginTop': '0'}),
         html.Div(id='insight5', style={'padding': '10px 12px', 'backgroundColor': '#e8f5e9',
@@ -204,7 +203,7 @@ app.layout = html.Div([
     # Row 4: Chart 6 (Map) - Full Width
     html.Div([
         html.Div([
-            html.H4("Geographic Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
+            html.H4("Chart 6: Geographic Distribution", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
         ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
         dcc.Graph(id='map-scatter', style={'marginTop': '0'}),
         html.Div(id='insight6', style={'padding': '10px 12px', 'backgroundColor': '#e8f5e9',
@@ -219,33 +218,34 @@ app.layout = html.Div([
 @app.callback(
     [Output('summary-stats', 'children'),
      Output('chart1', 'figure'), Output('insight1', 'children'),
-     Output('severity-pie', 'figure'), Output('insight2', 'children'),
+     Output('chart2-pie', 'figure'), Output('insight2', 'children'),
      Output('chart3', 'figure'), Output('insight3', 'children'),
      Output('chart4', 'figure'), Output('insight4', 'children'),
      Output('heatmap', 'figure'), Output('insight5', 'children'),
      Output('map-scatter', 'figure'), Output('insight6', 'children')],
     [Input('generate-btn', 'n_clicks')],
     [State('borough-filter', 'value'), State('year-filter', 'value'),
-     State('vehicle-filter', 'value'), State('severity-filter', 'value'),
-     State('timeofday-filter', 'value'),
+     State('vehicle-filter', 'value'), State('person-type-filter', 'value'),
+     State('injury-filter', 'value'),
      State('chart1-x', 'value'), State('chart1-y', 'value'),
      State('chart3-x', 'value'), State('chart3-y', 'value'), State('chart3-top', 'value'),
      State('chart4-x', 'value'), State('chart4-y', 'value')]
 )
-def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
+def update_dashboard(n_clicks, borough, year, vehicle, person_type, person_injury,
                      c1_x, c1_y, c3_x, c3_y, c3_top, c4_x, c4_y):
+
     # Filter data
     filtered_df = df.copy()
     if borough != 'All':
         filtered_df = filtered_df[filtered_df['BOROUGH'] == borough]
     if year != 'All':
-        filtered_df = filtered_df[filtered_df['YEAR'] == year]
+        filtered_df = filtered_df[filtered_df['CRASH_YEAR'] == year]
     if vehicle != 'All':
-        filtered_df = filtered_df[filtered_df['VEHICLE_TYPE_STANDARD'] == vehicle]
-    if severity != 'All':
-        filtered_df = filtered_df[filtered_df['CRASH_SEVERITY'] == severity]
-    if timeofday != 'All':
-        filtered_df = filtered_df[filtered_df['TIME_OF_DAY'] == timeofday]
+        filtered_df = filtered_df[filtered_df['VEHICLE TYPE CODE 1'] == vehicle]
+    if person_type != 'All':
+        filtered_df = filtered_df[filtered_df['PERSON_TYPE'] == person_type]
+    if person_injury != 'All':
+        filtered_df = filtered_df[filtered_df['PERSON_INJURY'] == person_injury]
 
     if len(filtered_df) == 0:
         empty_msg = html.Div([
@@ -262,55 +262,55 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
     total_crashes = len(filtered_df)
     total_injuries = filtered_df['NUMBER OF PERSONS INJURED'].sum()
     total_fatalities = filtered_df['NUMBER OF PERSONS KILLED'].sum()
-    ped_crashes = filtered_df['PEDESTRIAN_INVOLVED'].sum()
-    cyclist_crashes = filtered_df['CYCLIST_INVOLVED'].sum()
-    avg_vehicles = filtered_df[[c for c in df.columns if 'VEHICLE TYPE CODE' in c]].notna().sum(axis=1).mean()
+    ped_injuries = filtered_df['NUMBER OF PEDESTRIANS INJURED'].sum()
+    cyclist_injuries = filtered_df['NUMBER OF CYCLIST INJURED'].sum()
+    motorist_injuries = filtered_df['NUMBER OF MOTORIST INJURED'].sum()
 
     summary = html.Div([
-        html.H3("📊 Summary Statistics", style={'color': '#2c3e50'}),
+        html.H3("📊 Summary Statistics", style={'color': '#2c3e50', 'padding': '20px 20px 10px 20px'}),
         html.Div([
             html.Div([
                 html.H2(f"{total_crashes:,}", style={'color': '#3498db', 'margin': '0'}),
-                html.P("Total Crashes", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.P("Total Records", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'}),
 
             html.Div([
                 html.H2(f"{int(total_injuries):,}", style={'color': '#f39c12', 'margin': '0'}),
-                html.P("Injuries", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.P("Total Injuries", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'}),
 
             html.Div([
                 html.H2(f"{int(total_fatalities):,}", style={'color': '#e74c3c', 'margin': '0'}),
-                html.P("Fatalities", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.P("Total Fatalities", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'}),
 
             html.Div([
-                html.H2(f"{int(ped_crashes):,}", style={'color': '#9b59b6', 'margin': '0'}),
-                html.P("Pedestrian Involved", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.H2(f"{int(ped_injuries):,}", style={'color': '#9b59b6', 'margin': '0'}),
+                html.P("Pedestrian Injuries", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'}),
 
             html.Div([
-                html.H2(f"{int(cyclist_crashes):,}", style={'color': '#16a085', 'margin': '0'}),
-                html.P("Cyclist Involved", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.H2(f"{int(cyclist_injuries):,}", style={'color': '#16a085', 'margin': '0'}),
+                html.P("Cyclist Injuries", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'}),
 
             html.Div([
-                html.H2(f"{avg_vehicles:.1f}", style={'color': '#34495e', 'margin': '0'}),
-                html.P("Avg Vehicles/Crash", style={'margin': '0'})
-            ], style={'width': '13.5%', 'display': 'inline-block', 'textAlign': 'center',
+                html.H2(f"{int(motorist_injuries):,}", style={'color': '#34495e', 'margin': '0'}),
+                html.P("Motorist Injuries", style={'margin': '0'})
+            ], style={'width': '15%', 'display': 'inline-block', 'textAlign': 'center',
                       'padding': '15px', 'backgroundColor': '#ecf0f1', 'margin': '0.5%'})
-        ])
+        ], style={'padding': '0 20px 20px 20px'})
     ])
 
     # Chart 1: Time Series
     if c1_y == 'count':
         chart1_data = filtered_df.groupby(c1_x).size().reset_index(name='count')
-        y_label = 'Number of Crashes'
+        y_label = 'Number of Records'
     else:
         chart1_data = filtered_df.groupby(c1_x)[c1_y].sum().reset_index()
         y_label = c1_y
@@ -329,23 +329,23 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
         f"Peak at {max_cat} ({max_val:,.0f}), lowest at {min_cat} ({min_val:,.0f})"
     ])
 
-    # Chart 2: Severity Pie
-    severity_data = filtered_df['CRASH_SEVERITY'].value_counts()
-    fig2 = px.pie(values=severity_data.values, names=severity_data.index,
-                  color_discrete_sequence=['#2ecc71', '#f39c12', '#e74c3c'])
+    # Chart 2: Person Type Distribution
+    person_type_data = filtered_df['PERSON_TYPE'].value_counts()
+    fig2 = px.pie(values=person_type_data.values, names=person_type_data.index,
+                  color_discrete_sequence=['#2ecc71', '#f39c12', '#e74c3c', '#3498db'])
     fig2.update_layout(template='plotly_white', height=400)
 
-    most_common = severity_data.idxmax()
-    pct = (severity_data.max() / severity_data.sum() * 100)
+    most_common = person_type_data.idxmax()
+    pct = (person_type_data.max() / person_type_data.sum() * 100)
     insight2 = html.Div([
         html.Strong("🥧 Insight: "),
-        f"Most common severity: {most_common} ({pct:.1f}% of crashes)"
+        f"Most common person type: {most_common} ({pct:.1f}% of records)"
     ])
 
     # Chart 3: Categorical Bar
     if c3_y == 'count':
         chart3_data = filtered_df[c3_x].value_counts().head(c3_top)
-        y_label = 'Number of Crashes'
+        y_label = 'Number of Records'
     else:
         chart3_data = filtered_df.groupby(c3_x)[c3_y].sum().sort_values(ascending=False).head(c3_top)
         y_label = c3_y
@@ -365,7 +365,7 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
     # Chart 4: Time Distribution
     if c4_y == 'count':
         chart4_data = filtered_df[c4_x].value_counts().sort_index()
-        y_label = 'Number of Crashes'
+        y_label = 'Number of Records'
     else:
         chart4_data = filtered_df.groupby(c4_x)[c4_y].sum().sort_index()
         y_label = c4_y
@@ -383,9 +383,9 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
     ])
 
     # Chart 5: Heatmap
-    heatmap_data = filtered_df.groupby(['DAY_OF_WEEK_NUM', 'HOUR']).size().reset_index(name='count')
+    heatmap_data = filtered_df.groupby(['CRASH_DAYOFWEEK', 'CRASH_HOUR']).size().reset_index(name='count')
     if len(heatmap_data) > 0:
-        heatmap_pivot = heatmap_data.pivot(index='DAY_OF_WEEK_NUM', columns='HOUR', values='count')
+        heatmap_pivot = heatmap_data.pivot(index='CRASH_DAYOFWEEK', columns='CRASH_HOUR', values='count')
         fig5 = go.Figure(data=go.Heatmap(
             z=heatmap_pivot.values,
             x=heatmap_pivot.columns,
@@ -407,22 +407,25 @@ def update_dashboard(n_clicks, borough, year, vehicle, severity, timeofday,
         insight5 = ""
 
     # Chart 6: Map
-    map_sample = filtered_df[filtered_df['LATITUDE'].notna()]
+    map_sample = filtered_df[(filtered_df['LATITUDE'].notna()) & (filtered_df['LATITUDE'] != 0)]
     if len(map_sample) > 0:
         map_sample = map_sample.sample(n=min(5000, len(map_sample)), random_state=42)
+
+        # Color by injury severity
+        map_sample['COLOR_LABEL'] = map_sample['PERSON_INJURY'].fillna('Unknown')
+
         fig6 = px.scatter_map(
-            map_sample, lat='LATITUDE', lon='LONGITUDE', color='CRASH_SEVERITY',
-            color_discrete_map={'Fatal': '#e74c3c', 'Injury': '#f39c12',
-                                'Property Damage Only': '#2ecc71'},
+            map_sample, lat='LATITUDE', lon='LONGITUDE', color='COLOR_LABEL',
             title=f'Crash Locations (Sample of {len(map_sample):,})',
             zoom=10, height=600
         )
         fig6.update_layout(map_style="open-street-map")
 
-        fatal_pct = (map_sample['CRASH_SEVERITY'] == 'Fatal').sum() / len(map_sample) * 100
+        injury_types = map_sample['PERSON_INJURY'].value_counts()
+        top_injury = injury_types.idxmax() if len(injury_types) > 0 else "N/A"
         insight6 = html.Div([
             html.Strong("🗺️ Insight: "),
-            f"Showing {len(map_sample):,} locations, {fatal_pct:.1f}% are fatal crashes"
+            f"Showing {len(map_sample):,} locations, most common injury type: {top_injury}"
         ])
     else:
         fig6 = go.Figure()
