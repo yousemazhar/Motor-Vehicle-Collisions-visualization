@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 # Load data
 print("Loading data...")
-df = pd.read_parquet('nyc_crashes_integrated_clean4.parquet')
+df = pd.read_parquet('nyc_crashes_integrated_clean.parquet')
 df['CRASH DATE'] = pd.to_datetime(df['CRASH DATE'])
 print(f"Data loaded: {len(df):,} records")
 
