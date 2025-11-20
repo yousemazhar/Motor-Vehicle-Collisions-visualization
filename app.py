@@ -3,7 +3,7 @@ from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import numpy as np
+
 import warnings
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
