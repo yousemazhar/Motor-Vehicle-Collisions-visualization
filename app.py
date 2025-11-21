@@ -161,7 +161,33 @@ app.layout = html.Div([
                         style={'padding': '15px 40px', 'fontSize': '18px', 'backgroundColor': '#95a5a6',
                                'color': 'white', 'border': 'none', 'borderRadius': '5px', 'cursor': 'pointer',
                                'marginTop': '20px'})
-        ], style={'textAlign': 'center'})
+        ], style={'textAlign': 'center'}),
+
+        # Smart Search Section (NEW!)
+        html.Div([
+            html.Hr(style={'margin': '30px 0'}),
+            html.H4("🔎 Smart Search", style={'color': '#2c3e50', 'marginBottom': '10px'}),
+            html.P("Type natural language queries like: 'Brooklyn 2022 pedestrian crashes' or 'Manhattan weekends injured sedan'",
+                   style={'color': '#7f8c8d', 'fontSize': '14px', 'marginBottom': '10px'}),
+            html.Div([
+                dcc.Input(id='search-input', type='text',
+                          placeholder='e.g., Queens Friday night motorcycle fatalities...',
+                          style={'width': '70%', 'padding': '12px', 'fontSize': '16px',
+                                 'border': '2px solid #3498db', 'borderRadius': '5px',
+                                 'marginRight': '10px'}),
+                html.Button('🔍 Search & Apply Filters', id='search-btn', n_clicks=0,
+                            style={'padding': '12px 30px', 'fontSize': '16px', 'backgroundColor': '#27ae60',
+                                   'color': 'white', 'border': 'none', 'borderRadius': '5px', 'cursor': 'pointer'}),
+                html.Button('❌ Clear Search', id='clear-search-btn', n_clicks=0,
+                            style={'padding': '12px 30px', 'fontSize': '16px', 'backgroundColor': '#e74c3c',
+                                   'color': 'white', 'border': 'none', 'borderRadius': '5px', 'cursor': 'pointer',
+                                   'marginLeft': '10px'})
+            ], style={'marginBottom': '10px'}),
+            html.Div(id='search-feedback', style={'padding': '10px', 'marginTop': '10px',
+                                                  'backgroundColor': '#e8f5e9', 'borderRadius': '5px',
+                                                  'display': 'none'})
+        ], style={'marginTop': '20px', 'padding': '20px', 'backgroundColor': '#f8f9fa',
+                  'borderRadius': '5px', 'border': '2px dashed #3498db'})
 
     ], style={'padding': '20px', 'backgroundColor': '#f8f9fa', 'marginBottom': '20px'}),
 
@@ -296,12 +322,7 @@ app.layout = html.Div([
                                       {'label': 'Vehicle Type', 'value': 'VEHICLE TYPE CODE 1'},
                                       {'label': 'Person Type', 'value': 'PERSON_TYPE'},
                                       {'label': 'Safety Equipment', 'value': 'SAFETY_EQUIPMENT'},
-                                      {'label': 'Hour', 'value': 'CRASH_HOUR'},
-                                      {'label': 'Day of Week', 'value': 'CRASH_DAYOFWEEK'},
-                                      {'label': 'Month', 'value': 'CRASH_MONTH'},
-                                      {'label': 'Year', 'value': 'CRASH_YEAR'},
-                                      {'label': 'position in vehicle', 'value': 'POSITION_IN_VEHICLE'}
-                                      ],
+                                      {'label': 'Hour', 'value': 'CRASH_HOUR'}],
                              value='BOROUGH', clearable=False,
                              style={'width': '200px', 'display': 'inline-block'})
             ], style={'padding': '0 12px 12px 12px'})
@@ -699,6 +720,174 @@ def update_dashboard(n_clicks, borough, year, month, dow, hour_range, vehicle, p
 def reset_filters(n_clicks):
     if n_clicks > 0:
         return 'All', 'All', 'All', 'All', [0, 23], 'All', 'All', 'All', 'All', 'All'
+    return dash.no_update
+
+
+# Smart Search callback
+@app.callback(
+    [Output('borough-filter', 'value', allow_duplicate=True),
+     Output('year-filter', 'value', allow_duplicate=True),
+     Output('month-filter', 'value', allow_duplicate=True),
+     Output('dow-filter', 'value', allow_duplicate=True),
+     Output('hour-filter', 'value', allow_duplicate=True),
+     Output('vehicle-filter', 'value', allow_duplicate=True),
+     Output('person-type-filter', 'value', allow_duplicate=True),
+     Output('injury-filter', 'value', allow_duplicate=True),
+     Output('gender-filter', 'value', allow_duplicate=True),
+     Output('safety-filter', 'value', allow_duplicate=True),
+     Output('search-feedback', 'children'),
+     Output('search-feedback', 'style')],
+    [Input('search-btn', 'n_clicks')],
+    [State('search-input', 'value')],
+    prevent_initial_call=True
+)
+def smart_search(n_clicks, search_text):
+    if not search_text or n_clicks == 0:
+        return dash.no_update
+
+    search_lower = search_text.lower()
+
+    # Initialize with current defaults
+    borough = 'All'
+    year = 'All'
+    month = 'All'
+    dow = 'All'
+    hour_range = [0, 23]
+    vehicle = 'All'
+    person_type = 'All'
+    injury = 'All'
+    gender = 'All'
+    safety = 'All'
+
+    applied_filters = []
+
+    # Borough detection
+    boroughs = ['BROOKLYN', 'MANHATTAN', 'QUEENS', 'BRONX', 'STATEN ISLAND']
+    for b in boroughs:
+        if b.lower() in search_lower:
+            borough = b
+            applied_filters.append(f"Borough: {b}")
+            break
+
+    # Year detection (2012-2025)
+    import re
+    years = re.findall(r'\b(20[1-2][0-9])\b', search_text)
+    if years:
+        year = int(years[0])
+        applied_filters.append(f"Year: {year}")
+
+    # Month detection
+    months = {'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+              'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6, 'jul': 7, 'aug': 8,
+              'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
+    for m_name, m_num in months.items():
+        if m_name in search_lower:
+            month = m_num
+            applied_filters.append(f"Month: {m_name.capitalize()}")
+            break
+
+    # Day of week detection
+    days_map = {'monday': [0], 'tuesday': [1], 'wednesday': [2], 'thursday': [3],
+                'friday': [4], 'saturday': [5], 'sunday': [6],
+                'mon': [0], 'tue': [1], 'wed': [2], 'thu': [3], 'fri': [4], 'sat': [5], 'sun': [6],
+                'weekday': [0, 1, 2, 3, 4], 'weekend': [5, 6]}
+    for day_name, day_nums in days_map.items():
+        if day_name in search_lower:
+            dow = day_nums
+            applied_filters.append(f"Day: {day_name.capitalize()}")
+            break
+
+    # Time of day detection
+    if 'morning' in search_lower or 'rush hour morning' in search_lower:
+        hour_range = [6, 10]
+        applied_filters.append("Time: Morning (6-10)")
+    elif 'afternoon' in search_lower:
+        hour_range = [12, 17]
+        applied_filters.append("Time: Afternoon (12-17)")
+    elif 'evening' in search_lower or 'rush hour evening' in search_lower:
+        hour_range = [17, 20]
+        applied_filters.append("Time: Evening (17-20)")
+    elif 'night' in search_lower or 'nighttime' in search_lower:
+        hour_range = [20, 23]
+        applied_filters.append("Time: Night (20-23)")
+    elif 'late night' in search_lower or 'midnight' in search_lower:
+        hour_range = [0, 5]
+        applied_filters.append("Time: Late Night (0-5)")
+
+    # Vehicle type detection
+    vehicle_keywords = {
+        'sedan': 'SEDAN', 'suv': 'STATION WAGON/SPORT UTILITY VEHICLE',
+        'taxi': 'TAXI', 'truck': 'PICK-UP TRUCK', 'bus': 'BUS',
+        'motorcycle': 'MOTORCYCLE', 'bike': 'BICYCLE', 'scooter': 'SCOOTER',
+        'van': 'VAN', 'ambulance': 'AMBULANCE', 'moped': 'MOPED'
+    }
+    for keyword, vehicle_type in vehicle_keywords.items():
+        if keyword in search_lower:
+            vehicle = vehicle_type
+            applied_filters.append(f"Vehicle: {keyword.capitalize()}")
+            break
+
+    # Person type detection
+    if 'pedestrian' in search_lower:
+        person_type = 'PEDESTRIAN'
+        applied_filters.append("Person: Pedestrian")
+    elif 'cyclist' in search_lower or 'bicyclist' in search_lower:
+        person_type = 'CYCLIST'
+        applied_filters.append("Person: Cyclist")
+    elif 'occupant' in search_lower or 'driver' in search_lower:
+        person_type = 'OCCUPANT'
+        applied_filters.append("Person: Occupant")
+
+    # Injury type detection
+    if 'fatal' in search_lower or 'death' in search_lower or 'killed' in search_lower:
+        injury = 'KILLED'
+        applied_filters.append("Injury: Fatal")
+    elif 'injured' in search_lower or 'injury' in search_lower:
+        injury = 'INJURED'
+        applied_filters.append("Injury: Injured")
+
+    # Gender detection
+    if 'male' in search_lower and 'female' not in search_lower:
+        gender = 'M'
+        applied_filters.append("Gender: Male")
+    elif 'female' in search_lower:
+        gender = 'F'
+        applied_filters.append("Gender: Female")
+
+    # Create feedback message
+    if applied_filters:
+        feedback_content = html.Div([
+            html.Strong("✅ Filters Applied: "),
+            html.Span(", ".join(applied_filters)),
+            html.Br(),
+            html.Small("Click 'Generate Report' to see results",
+                       style={'color': '#7f8c8d', 'fontStyle': 'italic'})
+        ])
+        feedback_style = {'padding': '10px', 'marginTop': '10px', 'backgroundColor': '#e8f5e9',
+                          'borderRadius': '5px', 'display': 'block', 'borderLeft': '4px solid #27ae60'}
+    else:
+        feedback_content = html.Div([
+            html.Strong("⚠️ No filters detected. "),
+            html.Span("Try: 'Brooklyn 2022 pedestrian crashes' or 'Manhattan weekend taxi injured'")
+        ])
+        feedback_style = {'padding': '10px', 'marginTop': '10px', 'backgroundColor': '#fff3cd',
+                          'borderRadius': '5px', 'display': 'block', 'borderLeft': '4px solid #f39c12'}
+
+    return (borough, year, month, dow, hour_range, vehicle, person_type, injury, gender, safety,
+            feedback_content, feedback_style)
+
+
+# Clear search callback
+@app.callback(
+    [Output('search-input', 'value'),
+     Output('search-feedback', 'style', allow_duplicate=True)],
+    [Input('clear-search-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def clear_search(n_clicks):
+    if n_clicks > 0:
+        return '', {'display': 'none'}
     return dash.no_update
 
 
