@@ -95,7 +95,7 @@ app.layout = html.Div([
                              options=[{'label': 'All', 'value': 'All'}] +
                                      [{'label': ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d], 'value': d}
                                       for d in sorted(df['CRASH_DAYOFWEEK'].unique())],
-                             value='All', clearable=False)
+                             value='All', multi=True, placeholder='Select days...')
             ], style={'width': '14%', 'display': 'inline-block', 'marginRight': '1.5%'}),
 
             html.Div([
@@ -260,6 +260,31 @@ app.layout = html.Div([
                   'boxShadow': '0 2px 4px rgba(0,0,0,0.1)', 'marginBottom': '20px'})
     ]),
 
+    # Row 2.5: Contributing Factors Analysis (NEW!)
+    html.Div([
+        html.Div([
+            html.Div([
+                html.H4("Contributing Factor 1 - Top Causes", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
+            ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
+            dcc.Graph(id='factor1-chart', style={'marginTop': '0'}),
+            html.Div(id='insight-factor1', style={'padding': '10px 12px', 'backgroundColor': '#e8f5e9',
+                                                  'borderLeft': '4px solid #4caf50', 'borderRadius': '0 0 5px 5px'})
+        ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top',
+                  'marginRight': '2%', 'backgroundColor': '#fff', 'borderRadius': '5px',
+                  'boxShadow': '0 2px 4px rgba(0,0,0,0.1)', 'marginBottom': '20px'}),
+
+        html.Div([
+            html.Div([
+                html.H4("Contributing Factor 2 - Secondary Causes", style={'color': '#2c3e50', 'margin': '0', 'padding': '12px'})
+            ], style={'backgroundColor': '#f8f9fa', 'marginBottom': '0', 'borderRadius': '5px 5px 0 0'}),
+            dcc.Graph(id='factor2-chart', style={'marginTop': '0'}),
+            html.Div(id='insight-factor2', style={'padding': '10px 12px', 'backgroundColor': '#e8f5e9',
+                                                  'borderLeft': '4px solid #4caf50', 'borderRadius': '0 0 5px 5px'})
+        ], style={'width': '49%', 'display': 'inline-block', 'verticalAlign': 'top',
+                  'backgroundColor': '#fff', 'borderRadius': '5px',
+                  'boxShadow': '0 2px 4px rgba(0,0,0,0.1)', 'marginBottom': '20px'})
+    ]),
+
     # Row 3: New Comparison Chart
     html.Div([
         html.Div([
@@ -274,7 +299,9 @@ app.layout = html.Div([
                                       {'label': 'Hour', 'value': 'CRASH_HOUR'},
                                       {'label': 'Day of Week', 'value': 'CRASH_DAYOFWEEK'},
                                       {'label': 'Month', 'value': 'CRASH_MONTH'},
-                                      {'label': 'Year', 'value': 'CRASH_YEAR'}],
+                                      {'label': 'Year', 'value': 'CRASH_YEAR'},
+                                      {'label': 'position in vehicle', 'value': 'POSITION_IN_VEHICLE'}
+                                      ],
                              value='BOROUGH', clearable=False,
                              style={'width': '200px', 'display': 'inline-block'})
             ], style={'padding': '0 12px 12px 12px'})
@@ -317,6 +344,8 @@ app.layout = html.Div([
      Output('chart2-pie', 'figure'), Output('insight2', 'children'),
      Output('chart3', 'figure'), Output('insight3', 'children'),
      Output('chart4', 'figure'), Output('insight4', 'children'),
+     Output('factor1-chart', 'figure'), Output('insight-factor1', 'children'),
+     Output('factor2-chart', 'figure'), Output('insight-factor2', 'children'),
      Output('comparison-chart', 'figure'), Output('insight-compare', 'children'),
      Output('heatmap', 'figure'), Output('insight5', 'children'),
      Output('map-scatter', 'figure'), Output('insight6', 'children')],
@@ -341,8 +370,11 @@ def update_dashboard(n_clicks, borough, year, month, dow, hour_range, vehicle, p
         filtered_df = filtered_df[filtered_df['CRASH_YEAR'] == year]
     if month != 'All':
         filtered_df = filtered_df[filtered_df['CRASH_MONTH'] == month]
-    if dow != 'All':
-        filtered_df = filtered_df[filtered_df['CRASH_DAYOFWEEK'] == dow]
+    if dow != 'All' and dow:  # Handle multi-select
+        if isinstance(dow, list):
+            filtered_df = filtered_df[filtered_df['CRASH_DAYOFWEEK'].isin(dow)]
+        else:
+            filtered_df = filtered_df[filtered_df['CRASH_DAYOFWEEK'] == dow]
     if hour_range:
         filtered_df = filtered_df[(filtered_df['CRASH_HOUR'] >= hour_range[0]) &
                                   (filtered_df['CRASH_HOUR'] <= hour_range[1])]
@@ -366,7 +398,7 @@ def update_dashboard(n_clicks, borough, year, month, dow, hour_range, vehicle, p
         empty_fig.add_annotation(text="No data", xref="paper", yref="paper",
                                  x=0.5, y=0.5, showarrow=False, font=dict(size=16, color="gray"))
         return (empty_msg, empty_fig, "", empty_fig, "", empty_fig, "",
-                empty_fig, "", empty_fig, "", empty_fig, "", empty_fig, "")
+                empty_fig, "", empty_fig, "", empty_fig, "", empty_fig, "", empty_fig, "", empty_fig, "")
 
     # Summary Statistics
     total_records = len(filtered_df)
@@ -510,6 +542,49 @@ def update_dashboard(n_clicks, borough, year, month, dow, hour_range, vehicle, p
         f"Peak time: {max_cat4} ({chart4_data.max():,.0f}), Quietest: {min_cat4} ({chart4_data.min():,.0f})"
     ])
 
+    # NEW: Contributing Factor 1 Analysis
+    factor1_data = filtered_df['CONTRIBUTING FACTOR VEHICLE 1'].value_counts().head(15)
+    factor1_data = factor1_data[factor1_data.index != 'UNSPECIFIED']  # Remove generic entries
+
+    fig_factor1 = px.bar(x=factor1_data.index, y=factor1_data.values,
+                         labels={'x': 'Contributing Factor', 'y': 'Number of Crashes'})
+    fig_factor1.update_traces(marker_color='#e74c3c')
+    fig_factor1.update_layout(template='plotly_white', height=400,
+                              xaxis={'tickangle': -45})
+
+    top_factor1 = factor1_data.idxmax()
+    top_factor1_pct = (factor1_data.max() / len(filtered_df) * 100)
+    insight_factor1 = html.Div([
+        html.Strong("🚨 Insight: "),
+        f"Top cause: {top_factor1} ({factor1_data.max():,} crashes, {top_factor1_pct:.1f}%)"
+    ])
+
+    # NEW: Contributing Factor 2 Analysis
+    factor2_data = filtered_df['CONTRIBUTING FACTOR VEHICLE 2'].value_counts().head(15)
+    factor2_data = factor2_data[~factor2_data.index.isin(['UNSPECIFIED', 'NO SECOND VEHICLE'])]
+
+    if len(factor2_data) > 0:
+        fig_factor2 = px.bar(x=factor2_data.index, y=factor2_data.values,
+                             labels={'x': 'Secondary Contributing Factor', 'y': 'Number of Crashes'})
+        fig_factor2.update_traces(marker_color='#f39c12')
+        fig_factor2.update_layout(template='plotly_white', height=400,
+                                  xaxis={'tickangle': -45})
+
+        top_factor2 = factor2_data.idxmax()
+        top_factor2_pct = (factor2_data.max() / len(filtered_df) * 100)
+        insight_factor2 = html.Div([
+            html.Strong("🚨 Insight: "),
+            f"Top secondary cause: {top_factor2} ({factor2_data.max():,} crashes, {top_factor2_pct:.1f}%)"
+        ])
+    else:
+        fig_factor2 = go.Figure()
+        fig_factor2.add_annotation(text="No secondary factors", xref="paper", yref="paper",
+                                   x=0.5, y=0.5, showarrow=False)
+        insight_factor2 = html.Div([
+            html.Strong("ℹ️ Note: "),
+            "Most crashes involve only one vehicle or have unspecified secondary factors"
+        ])
+
     # NEW: Comparison Chart - Injury Rate Analysis
     compare_data = filtered_df.groupby(compare_cat).agg({
         'COLLISION_ID': 'count',
@@ -603,7 +678,8 @@ def update_dashboard(n_clicks, borough, year, month, dow, hour_range, vehicle, p
         insight6 = ""
 
     return (summary, fig1, insight1, fig2, insight2, fig3, insight3,
-            fig4, insight4, fig_compare, insight_compare, fig5, insight5, fig6, insight6)
+            fig4, insight4, fig_factor1, insight_factor1, fig_factor2, insight_factor2,
+            fig_compare, insight_compare, fig5, insight5, fig6, insight6)
 
 
 # Reset button callback
