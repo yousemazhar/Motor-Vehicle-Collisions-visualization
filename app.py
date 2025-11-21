@@ -271,7 +271,10 @@ app.layout = html.Div([
                                       {'label': 'Vehicle Type', 'value': 'VEHICLE TYPE CODE 1'},
                                       {'label': 'Person Type', 'value': 'PERSON_TYPE'},
                                       {'label': 'Safety Equipment', 'value': 'SAFETY_EQUIPMENT'},
-                                      {'label': 'Hour', 'value': 'CRASH_HOUR'}],
+                                      {'label': 'Hour', 'value': 'CRASH_HOUR'},
+                                      {'label': 'Day of Week', 'value': 'CRASH_DAYOFWEEK'},
+                                      {'label': 'Month', 'value': 'CRASH_MONTH'},
+                                      {'label': 'Year', 'value': 'CRASH_YEAR'}],
                              value='BOROUGH', clearable=False,
                              style={'width': '200px', 'display': 'inline-block'})
             ], style={'padding': '0 12px 12px 12px'})
