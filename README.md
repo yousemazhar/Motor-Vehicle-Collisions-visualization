@@ -307,7 +307,7 @@ Below is a clear summary of each member’s primary responsibilities, while ackn
 
 ---
 
-## ** Team-Wide Collaboration**
+##  Team-Wide Collaboration
 
 While each member held certain responsibilities, **the entire team contributed to all parts of the project** including:
 
