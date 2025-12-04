@@ -5,7 +5,7 @@
 
 This project is part of **Data Engineering & Visualization – Milestone 1**.
 We built an **interactive analytical dashboard** for *NYC Motor Vehicle Collisions* using:
-
+ML project : https://github.com/yousemazhar/DataOrbit-Fraud-Detection.git
 * **Python**
 * **Gradio**
 * **Plotly**
